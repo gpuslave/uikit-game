@@ -10,7 +10,7 @@ import UIKit
 
 class GameViewController: UIViewController {
 
-    // MARK: - UI Elements
+    // MARK: - UI Elements (Storyboard Outlets)
 
     @IBOutlet weak var gameContainerView: UIView!
     @IBOutlet weak var scoreLabel: UILabel!
@@ -18,13 +18,19 @@ class GameViewController: UIViewController {
     @IBOutlet weak var gameOverView: UIView!
     @IBOutlet weak var gameOverLabel: UILabel!
     @IBOutlet weak var restartButton: UIButton!
-    @IBOutlet weak var leftControlArea: UIView!
-    @IBOutlet weak var rightControlArea: UIView!
+    @IBOutlet weak var leftButton: UIButton!
+    @IBOutlet weak var rightButton: UIButton!
+    @IBOutlet weak var restartLabel: UILabel!
+    
 
     // MARK: - Game Components
 
     private var gameEngine: GameEngine!
     private var gameTimer: CADisplayLink?
+
+    // Continuous movement timers
+    private var leftHoldTimer: Timer?
+    private var rightHoldTimer: Timer?
 
     // MARK: - View Lifecycle
 
@@ -33,179 +39,51 @@ class GameViewController: UIViewController {
         setupUI()
         setupGame()
         setupControllers()
-        startGameLoop()
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-
-        // Create UI elements programmatically if not using storyboard
-        if gameContainerView == nil {
-            createUIElementsProgrammatically()
+        // Start the game loop only if it's not already running
+        if gameTimer == nil {
+            startGameLoop()
         }
     }
 
     // MARK: - UI Setup
 
-    private func createUIElementsProgrammatically() {
-        view.backgroundColor = .black
-
-        // Game container
-        gameContainerView = UIView()
-        gameContainerView.backgroundColor = .clear
-        gameContainerView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(gameContainerView)
-
-        // Score label
-        scoreLabel = UILabel()
-        scoreLabel.text = "Score: 0"
-        scoreLabel.textColor = .white
-        scoreLabel.font = UIFont.systemFont(ofSize: 18, weight: .bold)
-        scoreLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(scoreLabel)
-
-        // Health label
-        healthLabel = UILabel()
-        healthLabel.text = "Health: 3"
-        healthLabel.textColor = .white
-        healthLabel.font = UIFont.systemFont(ofSize: 18, weight: .bold)
-        healthLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(healthLabel)
-
-        // Game Over View
-        gameOverView = UIView()
-        gameOverView.backgroundColor = UIColor.black.withAlphaComponent(0.8)
-        gameOverView.isHidden = true
-        gameOverView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(gameOverView)
-
-        // Game Over Label
-        gameOverLabel = UILabel()
-        gameOverLabel.text = "Game Over"
-        gameOverLabel.textColor = .white
-        gameOverLabel.font = UIFont.systemFont(ofSize: 32, weight: .bold)
-        gameOverLabel.textAlignment = .center
-        gameOverLabel.translatesAutoresizingMaskIntoConstraints = false
-        gameOverView.addSubview(gameOverLabel)
-
-        // Restart Button
-        restartButton = UIButton(type: .system)
-        restartButton.setTitle("Restart Game", for: .normal)
-        restartButton.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .medium)
-        restartButton.setTitleColor(.white, for: .normal)
-        restartButton.backgroundColor = .systemBlue
-        restartButton.layer.cornerRadius = 8
-        restartButton.translatesAutoresizingMaskIntoConstraints = false
-        restartButton.addTarget(self, action: #selector(restartButtonTapped), for: .touchUpInside)
-        gameOverView.addSubview(restartButton)
-
-        // Control Areas
-        leftControlArea = UIView()
-        leftControlArea.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        leftControlArea.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(leftControlArea)
-
-        rightControlArea = UIView()
-        rightControlArea.backgroundColor = UIColor.white.withAlphaComponent(0.1)
-        rightControlArea.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(rightControlArea)
-
-        setupConstraints()
-    }
-
-    private func setupConstraints() {
-        let safeArea = view.safeAreaLayoutGuide
-
-        NSLayoutConstraint.activate([
-            // Game Container
-            gameContainerView.topAnchor.constraint(equalTo: scoreLabel.bottomAnchor, constant: 10),
-            gameContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            gameContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            gameContainerView.bottomAnchor.constraint(equalTo: leftControlArea.topAnchor),
-
-            // Score Label
-            scoreLabel.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: 10),
-            scoreLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-
-            // Health Label
-            healthLabel.topAnchor.constraint(equalTo: safeArea.topAnchor, constant: 10),
-            healthLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-
-            // Control Areas
-            leftControlArea.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            leftControlArea.trailingAnchor.constraint(equalTo: view.centerXAnchor),
-            leftControlArea.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            leftControlArea.heightAnchor.constraint(equalToConstant: 100),
-
-            rightControlArea.leadingAnchor.constraint(equalTo: view.centerXAnchor),
-            rightControlArea.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            rightControlArea.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            rightControlArea.heightAnchor.constraint(equalToConstant: 100),
-
-            // Game Over View
-            gameOverView.topAnchor.constraint(equalTo: view.topAnchor),
-            gameOverView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            gameOverView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            gameOverView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
-            // Game Over Label
-            gameOverLabel.centerXAnchor.constraint(equalTo: gameOverView.centerXAnchor),
-            gameOverLabel.centerYAnchor.constraint(equalTo: gameOverView.centerYAnchor, constant: -50),
-
-            // Restart Button
-            restartButton.centerXAnchor.constraint(equalTo: gameOverView.centerXAnchor),
-            restartButton.topAnchor.constraint(equalTo: gameOverLabel.bottomAnchor, constant: 30),
-            restartButton.widthAnchor.constraint(equalToConstant: 150),
-            restartButton.heightAnchor.constraint(equalToConstant: 44)
-        ])
-    }
-
     private func setupUI() {
-        view.backgroundColor = .black
+        view.backgroundColor = GameTheme.background
 
         // Hide game over view initially
         gameOverView?.isHidden = true
 
-        // Style control areas
-        leftControlArea?.layer.borderWidth = 1
-        leftControlArea?.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
-        rightControlArea?.layer.borderWidth = 1
-        rightControlArea?.layer.borderColor = UIColor.white.withAlphaComponent(0.3).cgColor
+        // Configure labels
+        scoreLabel?.textColor = GameTheme.text
+        healthLabel?.textColor = GameTheme.text
 
-        // Add labels to control areas
-        addControlLabels()
-    }
+        // Configure buttons (appearance can be customized in storyboard too)
+        leftButton?.setTitle("◀", for: .normal)
+        rightButton?.setTitle("▶", for: .normal)
+        [leftButton, rightButton].forEach {
+            $0?.setTitleColor(GameTheme.text, for: .normal)
+            $0?.backgroundColor = GameTheme.controlArea
+            $0?.layer.borderColor = GameTheme.border.cgColor
+            $0?.layer.borderWidth = 1
+        }
 
-    private func addControlLabels() {
-        // Left control label
-        let leftLabel = UILabel()
-        leftLabel.text = "◀ MOVE LEFT"
-        leftLabel.textColor = .white
-        leftLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
-        leftLabel.textAlignment = .center
-        leftLabel.translatesAutoresizingMaskIntoConstraints = false
-        leftControlArea.addSubview(leftLabel)
-
-        // Right control label
-        let rightLabel = UILabel()
-        rightLabel.text = "MOVE RIGHT ▶"
-        rightLabel.textColor = .white
-        rightLabel.font = UIFont.systemFont(ofSize: 12, weight: .medium)
-        rightLabel.textAlignment = .center
-        rightLabel.translatesAutoresizingMaskIntoConstraints = false
-        rightControlArea.addSubview(rightLabel)
-
-        NSLayoutConstraint.activate([
-            leftLabel.centerXAnchor.constraint(equalTo: leftControlArea.centerXAnchor),
-            leftLabel.centerYAnchor.constraint(equalTo: leftControlArea.centerYAnchor),
-            rightLabel.centerXAnchor.constraint(equalTo: rightControlArea.centerXAnchor),
-            rightLabel.centerYAnchor.constraint(equalTo: rightControlArea.centerYAnchor)
-        ])
+        // Game over UI
+        gameOverView?.backgroundColor = GameTheme.gameOverOverlay
+        gameOverLabel?.textColor = GameTheme.text
+        restartButton?.setTitleColor(.white, for: .normal)
+        restartButton?.backgroundColor = GameTheme.accent
+        restartButton?.layer.cornerRadius = GameConstants.UI.cornerRadius
     }
 
     // MARK: - Game Setup
 
     private func setupGame() {
+        // Ensure layout is up to date to get correct container size
+        view.layoutIfNeeded()
         let gameArea = gameContainerView?.bounds ?? view.bounds
         gameEngine = GameEngine(screenSize: gameArea.size)
         gameEngine.delegate = self
@@ -215,21 +93,16 @@ class GameViewController: UIViewController {
     }
 
     private func setupControllers() {
-        // Setup touch handlers for control areas
-        let leftTapGesture = UITapGestureRecognizer(target: self, action: #selector(leftAreaTapped))
-        leftControlArea?.addGestureRecognizer(leftTapGesture)
+        // Button taps (single-step move)
+        leftButton?.addTarget(self, action: #selector(leftTap), for: .primaryActionTriggered)
+        rightButton?.addTarget(self, action: #selector(rightTap), for: .primaryActionTriggered)
 
-        let rightTapGesture = UITapGestureRecognizer(target: self, action: #selector(rightAreaTapped))
-        rightControlArea?.addGestureRecognizer(rightTapGesture)
+        // Press-and-hold continuous movement
+        leftButton?.addTarget(self, action: #selector(leftHoldBegan), for: .touchDown)
+        leftButton?.addTarget(self, action: #selector(holdEnded), for: [.touchUpInside, .touchUpOutside, .touchCancel])
 
-        // Continuous touch for smoother control
-        let leftLongPress = UILongPressGestureRecognizer(target: self, action: #selector(leftAreaPressed(_:)))
-        leftLongPress.minimumPressDuration = 0.1
-        leftControlArea?.addGestureRecognizer(leftLongPress)
-
-        let rightLongPress = UILongPressGestureRecognizer(target: self, action: #selector(rightAreaPressed(_:)))
-        rightLongPress.minimumPressDuration = 0.1
-        rightControlArea?.addGestureRecognizer(rightLongPress)
+        rightButton?.addTarget(self, action: #selector(rightHoldBegan), for: .touchDown)
+        rightButton?.addTarget(self, action: #selector(holdEnded), for: [.touchUpInside, .touchUpOutside, .touchCancel])
     }
 
     // MARK: - Game Loop
@@ -254,44 +127,56 @@ class GameViewController: UIViewController {
         }
     }
 
-    // MARK: - Control Handlers
+    // MARK: - Control Handlers (Buttons)
 
-    @objc private func leftAreaTapped() {
+    // Single-tap movement
+    @objc private func leftTap() {
         gameEngine.movePlayerLeft()
     }
 
-    @objc private func rightAreaTapped() {
+    @objc private func rightTap() {
         gameEngine.movePlayerRight()
     }
 
-    @objc private func leftAreaPressed(_ gesture: UILongPressGestureRecognizer) {
-        switch gesture.state {
-        case .began, .changed:
-            gameEngine.movePlayerLeft()
-        default:
-            break
+    // Press-and-hold movement
+    @objc private func leftHoldBegan() {
+        invalidateHoldTimers()
+        leftHoldTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / GameConstants.Game.frameRate, repeats: true) { [weak self] _ in
+            self?.gameEngine.movePlayerLeft()
         }
+        RunLoop.current.add(leftHoldTimer!, forMode: .common)
     }
 
-    @objc private func rightAreaPressed(_ gesture: UILongPressGestureRecognizer) {
-        switch gesture.state {
-        case .began, .changed:
-            gameEngine.movePlayerRight()
-        default:
-            break
+    @objc private func rightHoldBegan() {
+        invalidateHoldTimers()
+        rightHoldTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / GameConstants.Game.frameRate, repeats: true) { [weak self] _ in
+            self?.gameEngine.movePlayerRight()
         }
+        RunLoop.current.add(rightHoldTimer!, forMode: .common)
     }
 
-    @objc private func restartButtonTapped() {
+    @objc private func holdEnded() {
+        invalidateHoldTimers()
+    }
+
+    private func invalidateHoldTimers() {
+        leftHoldTimer?.invalidate()
+        leftHoldTimer = nil
+        rightHoldTimer?.invalidate()
+        rightHoldTimer = nil
+    }
+
+    @IBAction private func restartButtonTapped() {
         gameEngine.restartGame()
         gameOverView.isHidden = true
     }
 
     // MARK: - Memory Management
-
+    
     deinit {
         gameTimer?.invalidate()
         gameTimer = nil
+        invalidateHoldTimers()
     }
 }
 
@@ -302,13 +187,15 @@ extension GameViewController: GameEngineDelegate {
     func gameDidEnd(won: Bool) {
         DispatchQueue.main.async { [weak self] in
             self?.gameOverLabel.text = won ? "🎉 You Won! 🎉" : "💀 Game Over 💀"
-            self?.gameOverLabel.textColor = won ? .systemGreen : .systemRed
+            self?.gameOverLabel.textColor = won ? GameTheme.success : GameTheme.danger
+            self?.restartButton.backgroundColor = won ? GameTheme.success : GameTheme.danger
+            self?.restartLabel?.textColor = .white
+            self?.restartLabel?.text = won ? "Play Again" : "Try Again"
             self?.gameOverView.isHidden = false
         }
     }
 
     func gameStateDidChange(_ state: GameState) {
-        // Handle game state changes if needed
         switch state {
         case .paused:
             gameTimer?.isPaused = true
@@ -331,3 +218,4 @@ extension GameViewController: GameEngineDelegate {
         }
     }
 }
+

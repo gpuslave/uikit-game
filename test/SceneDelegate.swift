@@ -1,4 +1,3 @@
-
 //
 //  SceneDelegate.swift
 //  SpaceInvaders
@@ -13,15 +12,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        guard let windowScene = (scene as? UIWindowScene) else { return }
-
-        window = UIWindow(windowScene: windowScene)
-
-        // Create the game view controller programmatically
-        let gameViewController = GameViewController()
-
-        window?.rootViewController = gameViewController
-        window?.makeKeyAndVisible()
+        // Do not create the window or rootViewController programmatically.
+        // If the target's "Main Interface" is set to Main.storyboard and it has an Initial View Controller,
+        // UIKit will create the window and load the initial scene from the storyboard automatically.
+        guard (scene as? UIWindowScene) != nil else { return }
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

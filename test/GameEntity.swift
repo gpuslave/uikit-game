@@ -33,7 +33,7 @@ protocol Renderable {
 
 // MARK: - Base Game Entity
 
-class GameEntity: Movable, Renderable {
+class GameEntity: Movable, Renderable, Equatable {
     var position: CGPoint {
         didSet {
             updateView()
@@ -64,6 +64,10 @@ class GameEntity: Movable, Renderable {
         let selfRect = CGRect(origin: position, size: size)
         let otherRect = CGRect(origin: other.position, size: other.size)
         return selfRect.intersects(otherRect)
+    }
+
+    static func == (lhs: GameEntity, rhs: GameEntity) -> Bool {
+        return lhs === rhs
     }
 }
 
@@ -97,7 +101,7 @@ class Projectile: GameEntity {
 // MARK: - Player Class (Single Responsibility Principle)
 
 class Player: GameEntity, Shootable, Destructible {
-    private(set) var health: Int
+    var health: Int
     private let maxHealth: Int
     private var lastShotTime: TimeInterval = 0
     private let shootingInterval: TimeInterval = 0.5
@@ -158,7 +162,7 @@ class Player: GameEntity, Shootable, Destructible {
 // MARK: - Enemy Class
 
 class Enemy: GameEntity, Shootable, Destructible {
-    private(set) var health: Int = 1
+    var health: Int = 1
     private var lastShotTime: TimeInterval = 0
     private let shootingInterval: TimeInterval
 
@@ -168,7 +172,7 @@ class Enemy: GameEntity, Shootable, Destructible {
 
     init(position: CGPoint) {
         // Random shooting interval between 2-4 seconds
-        self.shootingInterval = TimeInterval.random(in: 2.0...4.0)
+        self.shootingInterval = TimeInterval.random(in: 3.0...4.0)
 
         let size = CGSize(width: 30, height: 25)
         super.init(position: position, size: size, color: .red)

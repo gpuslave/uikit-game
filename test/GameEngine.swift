@@ -1,4 +1,3 @@
-
 //
 //  GameEngine.swift
 //  SpaceInvaders
@@ -46,24 +45,55 @@ class DefaultCollisionDetectionService: CollisionDetectionService {
         var destroyedEnemyProjectiles: [Projectile] = []
         var playerHit = false
 
+        // Use sets to avoid duplicates
+        var destroyedEnemySet = Set<ObjectIdentifier>()
+        var destroyedPlayerProjectileSet = Set<ObjectIdentifier>()
+        var destroyedEnemyProjectileSet = Set<ObjectIdentifier>()
+
         // Check player projectiles vs enemies
         for projectile in playerProjectiles {
+            // If this projectile already destroyed something this frame, skip
+            if destroyedPlayerProjectileSet.contains(ObjectIdentifier(projectile)) {
+                continue
+            }
+
             for enemy in enemies {
-                if projectile.intersects(with: enemy) && !enemy.isDestroyed {
+                // Skip enemies already destroyed this frame or previously
+                if enemy.isDestroyed || destroyedEnemySet.contains(ObjectIdentifier(enemy)) {
+                    continue
+                }
+
+                if projectile.intersects(with: enemy) {
                     enemy.takeDamage(projectile.damage)
-                    destroyedPlayerProjectiles.append(projectile)
-                    if enemy.isDestroyed {
+
+                    // Mark projectile destroyed exactly once
+                    if destroyedPlayerProjectileSet.insert(ObjectIdentifier(projectile)).inserted {
+                        destroyedPlayerProjectiles.append(projectile)
+                    }
+
+                    // If enemy died from this hit, mark it
+                    if enemy.isDestroyed && destroyedEnemySet.insert(ObjectIdentifier(enemy)).inserted {
                         destroyedEnemies.append(enemy)
                     }
+
+                    // Stop checking this projectile against other enemies in this frame
+                    break
                 }
             }
         }
 
         // Check enemy projectiles vs player
         for projectile in enemyProjectiles {
+            if destroyedEnemyProjectileSet.contains(ObjectIdentifier(projectile)) {
+                continue
+            }
+
             if projectile.intersects(with: player) && !player.isDestroyed {
                 player.takeDamage(projectile.damage)
-                destroyedEnemyProjectiles.append(projectile)
+
+                if destroyedEnemyProjectileSet.insert(ObjectIdentifier(projectile)).inserted {
+                    destroyedEnemyProjectiles.append(projectile)
+                }
                 playerHit = true
             }
         }
@@ -145,7 +175,7 @@ class GameEngine {
 
     // MARK: - Initialization (Dependency Injection)
 
-    init(screenSize: CGSize, 
+    init(screenSize: CGSize,
          collisionService: CollisionDetectionService = DefaultCollisionDetectionService(),
          enemySpawner: EnemySpawnerService = DefaultEnemySpawnerService()) {
 
@@ -214,12 +244,20 @@ class GameEngine {
         )
 
         // Remove destroyed entities
-        enemies.removeAll { result.destroyedEnemies.contains($0) }
-        playerProjectiles.removeAll { result.destroyedPlayerProjectiles.contains($0) }
-        enemyProjectiles.removeAll { result.destroyedEnemyProjectiles.contains($0) }
+        if !result.destroyedEnemies.isEmpty {
+            enemies = enemies.filter { !result.destroyedEnemies.contains($0) }
+        }
+        if !result.destroyedPlayerProjectiles.isEmpty {
+            playerProjectiles = playerProjectiles.filter { !result.destroyedPlayerProjectiles.contains($0) }
+        }
+        if !result.destroyedEnemyProjectiles.isEmpty {
+            enemyProjectiles = enemyProjectiles.filter { !result.destroyedEnemyProjectiles.contains($0) }
+        }
 
         // Update score
-        score += result.destroyedEnemies.count * 10
+        if !result.destroyedEnemies.isEmpty {
+            score += result.destroyedEnemies.count * 10
+        }
 
         // Update health display
         if result.playerHit {
@@ -229,17 +267,30 @@ class GameEngine {
 
     private func cleanupEntities() {
         // Remove out-of-bounds projectiles
-        playerProjectiles.removeAll { $0.isOutOfBounds(screenHeight: screenSize.height) }
-        enemyProjectiles.removeAll { $0.isOutOfBounds(screenHeight: screenSize.height) }
+        playerProjectiles.removeAll(where: { $0.isOutOfBounds(screenHeight: screenSize.height) })
+        enemyProjectiles.removeAll(where: { $0.isOutOfBounds(screenHeight: screenSize.height) })
     }
 
     private func checkWinLoseConditions() {
         if player.isDestroyed {
             gameState = .gameOver
             delegate?.gameDidEnd(won: false)
-        } else if enemies.isEmpty {
+            return
+        }
+
+        if enemies.isEmpty {
             gameState = .gameWon
             delegate?.gameDidEnd(won: true)
+            return
+        }
+
+        // lose condition: enemy reaches player's line
+        for enemy in enemies {
+            if enemy.position.y >= player.position.y {
+                gameState = .gameOver
+                delegate?.gameDidEnd(won: false)
+                return // No need to check other enemies
+            }
         }
     }
 
