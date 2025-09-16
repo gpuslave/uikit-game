@@ -87,7 +87,7 @@ class GameViewController: UIViewController {
         let gameArea = gameContainerView?.bounds ?? view.bounds
         gameEngine = GameEngine(screenSize: gameArea.size)
         gameEngine.delegate = self
-
+        gameEngine.initEntities()
         // Add all entity views to game container
         updateEntityViews()
     }

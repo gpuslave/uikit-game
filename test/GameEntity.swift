@@ -171,12 +171,13 @@ class Enemy: GameEntity, Shootable, Destructible {
     }
 
     init(position: CGPoint) {
-        // Random shooting interval between 2-4 seconds
+        // Random shooting interval between 3-4 seconds
         self.shootingInterval = TimeInterval.random(in: 3.0...4.0)
 
         let size = CGSize(width: 30, height: 25)
         super.init(position: position, size: size, color: .red)
 
+        lastShotTime = CACurrentMediaTime() + 0.1
         // Enemies move downward slowly
         self.velocity = CGPoint(x: 0, y: 0.5)
     }
@@ -187,6 +188,7 @@ class Enemy: GameEntity, Shootable, Destructible {
 
     func shoot() -> Projectile? {
         let currentTime = CACurrentMediaTime()
+   
         guard currentTime - lastShotTime >= shootingInterval else { return nil }
 
         lastShotTime = currentTime

@@ -195,6 +195,11 @@ class GameEngine {
 
     // MARK: - Game Setup
 
+    public func initEntities()
+    {
+        delegate?.healthDidUpdate(player.health)
+    }
+    
     private func setupGame() {
         enemies = enemySpawner.generateEnemies(for: screenSize, count: initialEnemyCount)
         gameState = .playing
